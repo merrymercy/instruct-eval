@@ -114,6 +114,8 @@ class SeqToSeqModel(EvalModel):
     lora_path: str = ""
     device: str = "cuda"
     load_8bit: bool = False
+    load_fp16: bool = False
+    num_gpus: int = 1
 
     def load(self):
         if self.model is None:
@@ -214,13 +216,18 @@ class LlamaModel(SeqToSeqModel):
             self.tokenizer = LlamaTokenizer.from_pretrained(self.model_path)
         if self.model is None:
             args = {}
+            if self.load_fp16:
+                args.update(low_cpu_mem_usage=True, torch_dtype=torch.float16)
+            if self.num_gpus != 1:
+                max_memory = {i: "33Gib" for i in range(self.num_gpus)}
+                args.update(device_map="auto", max_memory=max_memory)
             if self.load_8bit:
                 args.update(device_map="auto", load_in_8bit=True)
             self.model = LlamaForCausalLM.from_pretrained(self.model_path, **args)
             if self.lora_path:
                 self.model = PeftModel.from_pretrained(self.model, self.lora_path)
             self.model.eval()
-            if not self.load_8bit:
+            if "device_map" not in args:
                 self.model.to(self.device)
 
     def run(self, prompt: str, **kwargs) -> str:
