@@ -139,7 +139,12 @@ class SeqToSeqModel(EvalModel):
             max_length=self.max_output_length,
             **kwargs,
         )
-        return self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+        #return self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+
+        # Adjust for T5
+        out = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+        out = out[6:]
+        return out
 
     def count_text_length(self, text: str) -> int:
         self.load()
@@ -219,7 +224,7 @@ class LlamaModel(SeqToSeqModel):
             if self.load_fp16:
                 args.update(low_cpu_mem_usage=True, torch_dtype=torch.float16)
             if self.num_gpus != 1:
-                max_memory = {i: "33Gib" for i in range(self.num_gpus)}
+                max_memory = {i: "10Gib" for i in range(self.num_gpus)}
                 args.update(device_map="auto", max_memory=max_memory)
             if self.load_8bit:
                 args.update(device_map="auto", load_in_8bit=True)
