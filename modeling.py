@@ -116,6 +116,7 @@ class SeqToSeqModel(EvalModel):
     load_8bit: bool = False
     load_fp16: bool = False
     num_gpus: int = 1
+    max_gpu_memory: str = "13Gib"
 
     def load(self):
         if self.model is None:
@@ -166,13 +167,18 @@ class CausalModel(SeqToSeqModel):
     def load(self):
         if self.model is None:
             args = {}
+            if self.load_fp16:
+                args.update(low_cpu_mem_usage=True, torch_dtype=torch.float16)
+            if self.num_gpus != 1:
+                max_memory = {i: self.max_gpu_memory for i in range(self.num_gpus)}
+                args.update(device_map="auto", max_memory=max_memory)
             if self.load_8bit:
                 args.update(device_map="auto", load_in_8bit=True)
             self.model = AutoModelForCausalLM.from_pretrained(
                 self.model_path, trust_remote_code=True, **args
             )
             self.model.eval()
-            if not self.load_8bit:
+            if "device_map" not in args:
                 self.model.to(self.device)
         if self.tokenizer is None:
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_path)
@@ -219,7 +225,7 @@ class LlamaModel(SeqToSeqModel):
             if self.load_fp16:
                 args.update(low_cpu_mem_usage=True, torch_dtype=torch.float16)
             if self.num_gpus != 1:
-                max_memory = {i: "33Gib" for i in range(self.num_gpus)}
+                max_memory = {i: self.max_gpu_memory for i in range(self.num_gpus)}
                 args.update(device_map="auto", max_memory=max_memory)
             if self.load_8bit:
                 args.update(device_map="auto", load_in_8bit=True)
