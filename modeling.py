@@ -181,7 +181,7 @@ class CausalModel(SeqToSeqModel):
             if "device_map" not in args:
                 self.model.to(self.device)
         if self.tokenizer is None:
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_path)
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_path, trust_remote_code=True)
 
     def run(self, prompt: str, **kwargs) -> str:
         self.load()
